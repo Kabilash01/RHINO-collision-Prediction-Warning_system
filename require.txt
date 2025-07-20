@@ -6,3 +6,4 @@ SpeechRecognition
 pyaudio
 python-dotenv
 requests
+chardet 
