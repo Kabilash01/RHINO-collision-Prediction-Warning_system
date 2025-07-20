@@ -1,0 +1,8 @@
+google-cloud-speech
+google-cloud-texttospeech
+gtts
+pyttsx3
+SpeechRecognition
+pyaudio
+python-dotenv
+requests
