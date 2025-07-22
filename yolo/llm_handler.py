@@ -15,11 +15,58 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    gemini_model = genai.GenerativeModel('gemini-pro')
+    gemini_model = genai.GenerativeModel('gemma-3-27b-it')
 
 # Voice interaction state
 voice_active = False
 continuous_listening = False
+
+def update_gemini_api_key(new_api_key):
+    """Update Gemini API key during runtime"""
+    global GEMINI_API_KEY, gemini_model
+    try:
+        GEMINI_API_KEY = new_api_key
+        genai.configure(api_key=new_api_key)
+        gemini_model = genai.GenerativeModel('gemma-3-27b-it') # gemini-pro model
+        
+        # Test the new key
+        test_response = gemini_model.generate_content("Say 'API key updated successfully'")
+        print(f"[SUCCESS] New Gemini API key configured: {test_response.text}")
+        return True
+    except Exception as e:
+        print(f"[ERROR] Failed to update Gemini API key: {e}")
+        return False
+
+def check_llm_status():
+    """Check status of both LLM providers"""
+    status = {"gemini": False, "ollama": False}
+    
+    # Test Gemini
+    try:
+        if GEMINI_API_KEY and GEMINI_API_KEY != "your_gemini_api_key_here":
+            test_response = call_llm_gemini("Say 'working'")
+            if "working" in test_response.lower():
+                status["gemini"] = True
+                print("✅ Gemini API: Working")
+            else:
+                print("⚠️ Gemini API: Response unclear")
+        else:
+            print("❌ Gemini API: No valid key configured")
+    except Exception as e:
+        print(f"❌ Gemini API: Error - {e}")
+    
+    # Test Ollama
+    try:
+        test_response = call_llm_local("Say 'working'")
+        if "working" in test_response.lower() and not test_response.startswith("[OLLAMA ERROR]"):
+            status["ollama"] = True
+            print("✅ Ollama: Working")
+        else:
+            print("❌ Ollama: Not responding")
+    except Exception as e:
+        print(f"❌ Ollama: Error - {e}")
+    
+    return status
 
 # === LLM: Local Ollama ===
 def call_llm_local(prompt):
@@ -35,14 +82,28 @@ def call_llm_local(prompt):
 # === LLM: Google Gemini ===
 def call_llm_gemini(prompt):
     try:
-        if not GEMINI_API_KEY:
-            return call_llm_local(prompt)  # Fallback to local
+        if not GEMINI_API_KEY or GEMINI_API_KEY == "your_gemini_api_key_here":
+            print("[INFO] Gemini API key not configured, using local Ollama")
+            return call_llm_local(prompt)
         
         response = gemini_model.generate_content(prompt)
         return response.text
     except Exception as e:
-        print(f"[GEMINI ERROR] {e}")
-        return call_llm_local(prompt)  # Fallback to local
+        error_msg = str(e)
+        print(f"[GEMINI ERROR] {error_msg}")
+        
+        # Check for specific rate limit error
+        if "429" in error_msg or "RATE_LIMIT_EXCEEDED" in error_msg:
+            print("[INFO] Gemini rate limit exceeded, falling back to local Ollama")
+        elif "quota" in error_msg.lower():
+            print("[INFO] Gemini quota exceeded, falling back to local Ollama")
+        elif "invalid" in error_msg.lower() or "unauthorized" in error_msg.lower():
+            print("[INFO] Gemini API key invalid, falling back to local Ollama")
+        else:
+            print("[INFO] Gemini API error, falling back to local Ollama")
+        
+        # Always fallback to local LLM
+        return call_llm_local(prompt)
 
 # === ALERT GENERATION ===
 def generate_collision_explanation(vsv, vlv, headway, risk_score):
@@ -75,8 +136,12 @@ def get_voice_command():
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:
         print("[🎙️] Listening for driver command...")
+        print(1.01)
+        
         try:
+            print(1.1)
             audio = recognizer.listen(source, timeout=5)
+            print(1.2)
             text = recognizer.recognize_google(audio)
             print("[🗣️] You said:", text)
             return text

@@ -111,29 +111,45 @@ def demo_voice_commands():
         time.sleep(1)
 
 def interactive_demo():
-    """Interactive demo with live voice input"""
+    """Interactive demo with live voice input (Emergency-focused)"""
     
     print("\n🎙️ Starting Interactive Voice Demo")
     print("="*50)
+    print("🚨 EMERGENCY MODE: Voice assistant optimized for crash scenarios")
     print("Available commands:")
-    print("- 'Hey Rhino' + your question (continuous listening)")
-    print("- Press 'v' + Enter for manual voice input")
+    print("- 'crash' - Simulate emergency crash scenario")
+    print("- 'v' + Enter for manual voice input")
     print("- Type 'quit' to exit")
     print("- Type 'demo' to run automated demo")
     
-    speak_text("RHINO voice assistant demo started. Say 'Hey Rhino' or press 'v' for voice input.")
-    
-    # Start continuous listening
-    voice_thread = start_continuous_listening(get_mock_vehicle_data)
+    speak_text("RHINO emergency voice demo started. Type 'crash' to test emergency mode or 'v' for voice input.")
     
     try:
         while True:
-            user_input = input("\nEnter command (v/demo/quit): ").strip().lower()
+            user_input = input("\nEnter command (crash/v/demo/quit): ").strip().lower()
             
             if user_input == 'quit':
                 break
             elif user_input == 'demo':
                 demo_voice_commands()
+            elif user_input == 'crash':
+                print("🚨 SIMULATING CRASH SCENARIO...")
+                # Simulate emergency activation
+                speak_text("CRASH DETECTED! Emergency voice assistant activated. How can I help you?")
+                
+                emergency_command = get_voice_command()
+                if emergency_command and not emergency_command.startswith("[STT ERROR]"):
+                    # Process as emergency with critical vehicle data
+                    emergency_data = {
+                        'vsv': 45.0, 'vlv': 10.0, 'headway': 3.0, 
+                        'visibility': 'clear', 'risk_level': 'critical'
+                    }
+                    response = process_voice_command(emergency_command, emergency_data)
+                    print(f"🚨 Emergency Response: {response}")
+                    speak_text(response)
+                else:
+                    speak_text("Emergency services notified. Stay calm.")
+                    
             elif user_input == 'v':
                 print("🎙️ Listening for voice command...")
                 command = get_voice_command()
@@ -154,8 +170,7 @@ def interactive_demo():
         print("\n⚠️ Demo interrupted by user")
     
     finally:
-        stop_continuous_listening()
-        speak_text("RHINO voice assistant demo ended.")
+        speak_text("RHINO emergency voice demo ended.")
 def check_system_status():
     """Check if all voice assistant components are working"""
     print("\n🔧 System Status Check")

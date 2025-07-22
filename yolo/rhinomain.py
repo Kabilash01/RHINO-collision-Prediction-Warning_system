@@ -100,18 +100,19 @@ def get_current_vehicle_data():
     """Callback function to provide current vehicle data to voice assistant"""
     return current_vehicle_data.copy()
 
-# === IP Webcam Video Stream ===
-VIDEO_URL = "http://192.168.82.137:8080/video"
-cap = cv2.VideoCapture(VIDEO_URL)
+# === IP Webcam Video Stream ===#
+#VIDEO_URL = "http://192.168.82.137:8080/video"
+#cap = cv2.VideoCapture(VIDEO_URL)
+VIDEO_PATH = "C:/RHINO-CAR/test_videos/test (6).mp4"
+cap = cv2.VideoCapture(VIDEO_PATH)
 if not cap.isOpened():
     print("[ERROR] Video stream not opened.")
     exit()
 
 print("[INFO] RHINO-X live stream started...")
 
-# === Start Continuous Voice Interaction ===
-speak_text("RHINO system activated. Say 'Hey Rhino' anytime for assistance.")
-voice_thread = start_continuous_listening(get_current_vehicle_data)
+# === Voice Assistant Setup (Emergency Only) ===
+speak_text("RHINO system activated. Voice assistant will activate during emergencies.")
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -199,12 +200,51 @@ while cap.isOpened():
         SmsAlert(location="⚠ Crash Detected").run()
         EmailAlert(location="⚠ Crash Detected").run()
 
-        # === Gemini LLM live assistant interaction ===
-        speak_text("Crash detected. How can I assist you?")
-        user_input = get_voice_command()
-        if user_input:
-            reply = call_llm_gemini(f"You are a vehicle safety assistant. The crash has occurred. Here are the values: VSV={vsv:.1f}, VLV={vlv:.1f}, headway={headway:.1f}, TTC={ttc:.1f}, visibility={visibility}. The driver says: '{user_input}'. Respond appropriately.")
-            speak_text(reply)
+        # === Emergency Voice Assistant Activation ===
+        speak_text("CRASH DETECTED! Emergency voice assistant activated. How can I help you?")
+        
+        # Listen for emergency commands with timeout
+        try:
+            user_input = get_voice_command()
+            if user_input and not user_input.startswith("[STT ERROR]"):
+                print(f"[🗣️] Emergency command: {user_input}")
+                
+                # Process emergency command with context
+                emergency_context = f"EMERGENCY SITUATION: Crash detected. Vehicle data - Speed: {vsv:.1f} km/h, Lead vehicle: {vlv:.1f} km/h, Distance: {headway:.1f}m, Visibility: {visibility}, Risk: {risk_level}. Driver says: '{user_input}'"
+                
+                try:
+                    # Try Gemini first, with automatic fallback to Ollama
+                    reply = call_llm_gemini(f"You are an emergency vehicle safety assistant. {emergency_context}. Provide immediate, helpful emergency guidance. Be concise and actionable.")
+                    print(f"[🤖] Emergency response: {reply}")
+                    speak_text(reply)
+                except Exception as llm_error:
+                    print(f"[ERROR] LLM failed: {llm_error}")
+                    # Fallback emergency response
+                    fallback_response = "Emergency detected. Stay calm. Check for injuries. Call emergency services at your local emergency number. If vehicle is blocking traffic, turn on hazard lights."
+                    speak_text(fallback_response)
+                
+                # Check if driver needs navigation assistance
+                if any(word in user_input.lower() for word in ["hospital", "help", "emergency", "directions", "navigate"]):
+                    speak_text("Would you like directions to the nearest hospital?")
+                    try:
+                        hospital_response = get_voice_command()
+                        if hospital_response and any(word in hospital_response.lower() for word in ["yes", "okay", "sure", "hospital"]):
+                            try:
+                                from routing import get_route_voice_friendly
+                                route_info = get_route_voice_friendly("Current Location", "nearest hospital")
+                                speak_text(route_info)
+                            except Exception as route_error:
+                                print(f"[ERROR] Routing failed: {route_error}")
+                                speak_text("Unable to get directions. Please use your phone navigation to find the nearest hospital.")
+                    except Exception as nav_error:
+                        print(f"[ERROR] Navigation voice failed: {nav_error}")
+            else:
+                print("[WARNING] Could not understand emergency voice command")
+                speak_text("I couldn't understand. Emergency services have been notified. Stay calm and follow standard emergency procedures.")
+                
+        except Exception as e:
+            print(f"[ERROR] Emergency voice assistant failed: {e}")
+            speak_text("Emergency services have been notified. Please stay safe.")
 
     else:
         cv2.putText(frame, "✓ SAFE", (30, 160), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -216,23 +256,33 @@ while cap.isOpened():
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 1)
     cv2.putText(frame, f"Distance: {sensor_value:.1f} mm", (30, 220),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+    
+    # Voice assistant status indicator
+    cv2.putText(frame, "Voice: Emergency Only (Press V for manual)", (30, 250),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 255, 100), 1)
+    cv2.putText(frame, "Controls: V=Voice, H=Help, Q=Quit", (30, 270),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 255), 1)
 
     cv2.imshow("RHINO-X Live", frame)
     
-    # Handle keyboard input for voice activation
+    # Handle keyboard input for manual voice activation
     key = cv2.waitKey(1) & 0xFF
     if key == ord('q'):
         break
-    elif key == ord('v'):  # Press 'v' for voice command
-        print("[🎙️] Voice command activated...")
+    elif key == ord('v'):  # Press 'v' for manual voice command
+        print("[🎙️] Manual voice command activated...")
+        speak_text("Voice assistant activated. What can I help you with?")
         command = get_voice_command()
         if command and not command.startswith("[STT ERROR]"):
             response = process_voice_command(command, current_vehicle_data)
             speak_text(response)
+        else:
+            speak_text("I couldn't understand. Please try again.")
+    elif key == ord('h'):  # Press 'h' for help
+        speak_text("RHINO Voice Commands: Press V for voice input, Q to quit, H for help. Voice assistant automatically activates during emergencies.")
 
 cap.release()
 cv2.destroyAllWindows()
 
-# === Cleanup Voice Assistant ===
-stop_continuous_listening()
+# === System Shutdown ===
 speak_text("RHINO system shutting down. Drive safely!")
