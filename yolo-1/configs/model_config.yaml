@@ -1,0 +1,17 @@
+model:
+  name: YOLOv8
+  version: 8.0
+  input_size: [640, 640]
+  confidence_threshold: 0.25
+  nms_threshold: 0.45
+  classes:
+    - car
+    - truck
+    - bus
+    - motorcycle
+    - bicycle
+  anchors:
+    - [10, 13, 16, 30, 33, 23]
+    - [30, 61, 62, 45, 59, 119]
+    - [116, 90, 156, 198, 373, 326]
+  pretrained_weights: "../models/yolov8n.pt"

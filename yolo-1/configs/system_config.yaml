@@ -1,0 +1,31 @@
+system_config.yaml
+
+system:
+  name: RHINO-X
+  version: 1.0
+  description: System configuration for the RHINO-X vehicle safety and monitoring system.
+  logging:
+    level: INFO
+    file: logs/system.log
+  hardware:
+    serial_port: COM3
+    baud_rate: 115200
+  video:
+    resolution:
+      width: 1280
+      height: 720
+    frame_rate: 30
+  alerts:
+    sms_enabled: true
+    email_enabled: true
+    emergency_contact: 
+      sms: "+1234567890"
+      email: "emergency@example.com"
+  thresholds:
+    risk:
+      critical: 0.7
+      high: 0.4
+      moderate: 0.2
+    visibility:
+      foggy_distance: 2000
+      sunny_distance: 9999

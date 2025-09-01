@@ -53,8 +53,8 @@ vehicle_ids = [int(k) for k, v in label_map.items() if v in ["car", "truck", "bu
 
 # === Serial Port Setup ===
 try:
-    ser = serial.Serial('COM14', 115200, timeout=1)
-    print("[INFO] Serial COM14 connected.")
+    ser = serial.Serial('COM3', 115200, timeout=1)
+    print("[INFO] Serial COM3 connected.")
 except:
     ser = None
     print("[WARNING] Serial port not connected. Using defaults.")

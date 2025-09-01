@@ -1,0 +1,20 @@
+{
+  "contacts": [
+    {
+      "name": "Emergency Contact 1",
+      "phone": "+1-555-0100",
+      "relationship": "Family",
+      "priority": 1
+    }
+  ],
+  "services": {
+    "roadside": "1-800-AAA-HELP",
+    "insurance": "1-800-GEICO"
+  },
+  "medical_info": {
+    "blood_type": "Unknown",
+    "allergies": "None known",
+    "medications": "None",
+    "medical_conditions": "None"
+  }
+}
